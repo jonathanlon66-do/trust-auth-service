@@ -8,9 +8,8 @@ import com.trust.auth.infrastructure.config.DynamoDbProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
@@ -18,26 +17,24 @@ import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 @RequiredArgsConstructor
 public class UserDynamoAdapter implements UserRepositoryPort {
 
-    private final DynamoDbEnhancedClient dynamoDbClient;
+    private final DynamoDbEnhancedAsyncClient dynamoDbClient;
     private final DynamoDbProperties tables;
     private final UserDynamoMapper mapper;
 
-    private DynamoDbTable<UserEntity> table() {
+    private DynamoDbAsyncTable<UserEntity> table() {
         return dynamoDbClient.table(tables.getUsers(), TableSchema.fromBean(UserEntity.class));
     }
 
     @Override
     public Mono<User> save(User user) {
-        return Mono.fromCallable(() -> {
-            table().putItem(mapper.toEntity(user));
-            return user;
-        }).subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromFuture(table().putItem(mapper.toEntity(user)))
+                .thenReturn(user);
     }
 
     @Override
     public Mono<Void> delete(String userId) {
-        return Mono.fromRunnable(() ->
+        return Mono.fromFuture(
                 table().deleteItem(Key.builder().partitionValue(userId).build())
-        ).subscribeOn(Schedulers.boundedElastic()).then();
+        ).then();
     }
 }

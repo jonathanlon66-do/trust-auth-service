@@ -4,16 +4,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderAsyncClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.net.URI;
 
 @Configuration
-public class
-AwsConfig {
+public class AwsConfig {
 
     @Value("${aws.region}")
     private String region;
@@ -22,8 +21,8 @@ AwsConfig {
     private String dynamoDbEndpoint;
 
     @Bean
-    public DynamoDbEnhancedClient dynamoDbEnhancedClient() {
-        var builder = DynamoDbClient.builder()
+    public DynamoDbEnhancedAsyncClient dynamoDbEnhancedAsyncClient() {
+        var builder = DynamoDbAsyncClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.create());
 
@@ -31,14 +30,14 @@ AwsConfig {
             builder.endpointOverride(URI.create(dynamoDbEndpoint));
         }
 
-        return DynamoDbEnhancedClient.builder()
+        return DynamoDbEnhancedAsyncClient.builder()
                 .dynamoDbClient(builder.build())
                 .build();
     }
 
     @Bean
-    public CognitoIdentityProviderClient cognitoClient() {
-        return CognitoIdentityProviderClient.builder()
+    public CognitoIdentityProviderAsyncClient cognitoAsyncClient() {
+        return CognitoIdentityProviderAsyncClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();

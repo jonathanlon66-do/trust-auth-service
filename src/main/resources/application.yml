@@ -13,11 +13,9 @@ aws:
     client-secret: ${AWS_COGNITO_CLIENT_SECRET}
   dynamodb:
     endpoint: ${AWS_DYNAMODB_ENDPOINT:}
-  ses:
-    from-email: ${RESEND_FROM_EMAIL:noreply@trust.com.co}
-
 resend:
   api-key: ${RESEND_API_KEY}
+  from-email: ${RESEND_FROM_EMAIL:noreply@trust.com.co}
 
 trust:
   jwt:

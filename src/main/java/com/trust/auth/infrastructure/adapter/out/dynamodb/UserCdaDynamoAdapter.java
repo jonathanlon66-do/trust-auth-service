@@ -8,28 +8,25 @@ import com.trust.auth.infrastructure.config.DynamoDbProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Component
 @RequiredArgsConstructor
 public class UserCdaDynamoAdapter implements UserCdaRepositoryPort {
 
-    private final DynamoDbEnhancedClient dynamoDbClient;
+    private final DynamoDbEnhancedAsyncClient dynamoDbClient;
     private final DynamoDbProperties tables;
     private final UserCdaDynamoMapper mapper;
 
-    private DynamoDbTable<UserCdaEntity> table() {
+    private DynamoDbAsyncTable<UserCdaEntity> table() {
         return dynamoDbClient.table(tables.getUserCda(), TableSchema.fromBean(UserCdaEntity.class));
     }
 
     @Override
     public Mono<UserCda> save(UserCda userCda) {
-        return Mono.fromCallable(() -> {
-            table().putItem(mapper.toEntity(userCda));
-            return userCda;
-        }).subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromFuture(table().putItem(mapper.toEntity(userCda)))
+                .thenReturn(userCda);
     }
 }

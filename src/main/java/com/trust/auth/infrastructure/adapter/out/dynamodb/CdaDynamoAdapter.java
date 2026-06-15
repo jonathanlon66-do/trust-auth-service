@@ -8,10 +8,8 @@ import com.trust.auth.infrastructure.config.DynamoDbProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
@@ -20,37 +18,33 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 @RequiredArgsConstructor
 public class CdaDynamoAdapter implements CdaRepositoryPort {
 
-    private final DynamoDbEnhancedClient dynamoDbClient;
+    private final DynamoDbEnhancedAsyncClient dynamoDbClient;
     private final DynamoDbProperties tables;
     private final CdaDynamoMapper mapper;
 
-    private DynamoDbTable<CdaEntity> table() {
+    private DynamoDbAsyncTable<CdaEntity> table() {
         return dynamoDbClient.table(tables.getCdas(), TableSchema.fromBean(CdaEntity.class));
     }
 
     @Override
     public Mono<Boolean> existsByCompanyCode(String companyCode) {
-        return Mono.fromCallable(() -> {
-            DynamoDbIndex<CdaEntity> index = table().index("company_code-index");
-            var results = index.query(QueryConditional.keyEqualTo(
-                    Key.builder().partitionValue(companyCode).build()
-            ));
-            return results.stream().anyMatch(page -> !page.items().isEmpty());
-        }).subscribeOn(Schedulers.boundedElastic());
+        var index = table().index("company_code-index");
+        var query = QueryConditional.keyEqualTo(Key.builder().partitionValue(companyCode).build());
+        return Mono.from(index.query(r -> r.queryConditional(query)))
+                .map(page -> !page.items().isEmpty())
+                .defaultIfEmpty(false);
     }
 
     @Override
     public Mono<Cda> save(Cda cda) {
-        return Mono.fromCallable(() -> {
-            table().putItem(mapper.toEntity(cda));
-            return cda;
-        }).subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromFuture(table().putItem(mapper.toEntity(cda)))
+                .thenReturn(cda);
     }
 
     @Override
     public Mono<Void> delete(String cdaId) {
-        return Mono.fromRunnable(() ->
+        return Mono.fromFuture(
                 table().deleteItem(Key.builder().partitionValue(cdaId).build())
-        ).subscribeOn(Schedulers.boundedElastic()).then();
+        ).then();
     }
 }

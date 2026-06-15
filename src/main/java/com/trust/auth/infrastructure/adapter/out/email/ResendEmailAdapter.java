@@ -15,13 +15,13 @@ public class ResendEmailAdapter implements EmailPort {
 
     private final Resend resend;
 
-    @Value("${aws.ses.from-email}")
+    @Value("${resend.from-email}")
     private String fromEmail;
 
     @Override
     public Mono<Void> sendCdaInvitation(String toEmail, String adminName, String cdaName,
                                          String companyCode, String tempPassword) {
-        return Mono.fromRunnable(() -> {
+        return Mono.fromCallable(() -> {
             String html = buildInvitationHtml(adminName, cdaName, companyCode, toEmail, tempPassword);
 
             resend.emails().send(CreateEmailOptions.builder()
@@ -30,6 +30,7 @@ public class ResendEmailAdapter implements EmailPort {
                     .subject("Tu CDA fue activado en Trust — " + cdaName)
                     .html(html)
                     .build());
+            return null;
         }).subscribeOn(Schedulers.boundedElastic()).then();
     }
 
