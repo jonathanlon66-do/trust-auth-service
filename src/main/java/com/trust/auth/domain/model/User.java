@@ -16,5 +16,6 @@ public class User {
     private final String documentNumber;
     private final boolean onboarded;
     private final boolean active;
+    private final PlatformRole platformRole;
     private final Instant createdAt;
 }

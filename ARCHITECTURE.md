@@ -150,6 +150,36 @@ GlobalExceptionHandler la captura
 Retorna ProblemDetail con el código HTTP correcto (409, 400, 403, etc.)
 ```
 
+### Modelo de autorización
+
+Trust tiene dos niveles de identidad, separados a propósito:
+
+| Nivel | Dónde vive | Qué representa | Ejemplo |
+|-------|-----------|----------------|---------|
+| `scopes` (módulos de CDA) | `trust_user_cda.scopes` | Qué puede hacer un usuario **dentro de un CDA** | `ADMINISTRADOR`, `CALIDAD` |
+| `platform_role` | `trust_users.platform_role` | Rol del usuario **en toda la plataforma Trust** | `TRUST_ADMIN` |
+
+- Un usuario normal de un CDA tiene `platform_role = null` y sus scopes vienen de `trust_user_cda`.
+- El staff interno de Trust tiene `platform_role = TRUST_ADMIN` y NO pertenece a ningún CDA (su JWT no lleva `cda_id`).
+
+**Flujo de autorización:**
+```
+Request con Authorization: Bearer <jwt>
+    ↓
+JwtAuthenticationFilter valida la firma del token
+    ↓
+Extrae el claim "scopes" → los pone como authorities en el contexto reactivo
+    ↓
+Spring Security evalúa el path:
+    /auth/**       → permitAll (público)
+    /internal/**   → hasAuthority("TRUST_ADMIN")
+    resto          → authenticated
+```
+
+El filtro no distingue de dónde salieron los scopes (de `user_cda` o de `platform_role`) — solo lee la lista del token. El login es quien decide qué scopes meter según el tipo de usuario.
+
+**Bootstrap:** el primer usuario `TRUST_ADMIN` se siembra manualmente una vez (en Cognito + `trust_users` con `platform_role = TRUST_ADMIN`), porque no hay otro Trust admin que lo cree. Resuelve el huevo-y-gallina.
+
 ---
 
 ## 1. Responsabilidad del servicio
@@ -484,7 +514,7 @@ GSI: user-index → PK: user_id (para ver todos los CDAs de un user)
 | PUT | `/users/workers/{id}` | Actualizar rol/scopes |
 | DELETE | `/users/workers/{id}` | Desactivar trabajador |
 
-### Internos — solo entre microservicios (header interno)
+### Internos — scope: `TRUST_ADMIN` (staff de Trust)
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | POST | `/internal/cdas` | Trust activa un CDA |
@@ -530,6 +560,7 @@ FRONTEND_URL=https://app.trust.com.co
 | Multi-CDA user | Un Cognito account, múltiples registros en `trust_user_cda` | El código de empresa en el login determina el contexto |
 | Email en creación de worker | Siempre enviar invitación | El trabajador puede no existir en Cognito o puede ser un user existente en otro CDA |
 | Entorno local | Perfiles AWS apuntando a QA | No se usa DynamoDB local — el ambiente QA en AWS sirve como entorno de desarrollo |
+| Auth de `/internal/**` | Scope `TRUST_ADMIN` vía JWT (no shared secret) | Auditoría por usuario, revocable, un solo esquema de auth. El staff de Trust es un usuario con `platform_role`, no un tenant falso |
 
 ---
 

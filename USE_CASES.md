@@ -154,7 +154,7 @@ No se invalida en Cognito porque el token de Cognito nunca sale al frontend. El 
 
 **`POST /internal/cdas`**
 
-**Autorización:** Header `X-Internal-Key: {clave compartida}` — solo backoffice interno de Trust.
+**Autorización:** JWT con scope `TRUST_ADMIN`. Solo usuarios con `platform_role = TRUST_ADMIN` (staff interno de Trust) pueden activar CDAs. El filtro JWT valida el token y Spring Security exige la authority `TRUST_ADMIN` en el path `/internal/**`.
 
 **Request body:**
 ```json

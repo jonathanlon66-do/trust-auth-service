@@ -22,6 +22,7 @@ public class UserEntity {
     private String documentNumber;
     private boolean onboarded;
     private boolean active;
+    private String platformRole;
     private String createdAt;
 
     @DynamoDbPartitionKey
