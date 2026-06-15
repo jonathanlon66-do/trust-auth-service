@@ -73,6 +73,52 @@ src/main/java/com/trust/{servicio}/
 | Los controllers no tienen lógica — solo delegan | Thin controllers |
 | Las excepciones de negocio se lanzan en el `Service` | El dominio decide qué es un error |
 | El `GlobalExceptionHandler` traduce excepciones a HTTP | Separación entre negocio e HTTP |
+| Nunca usar `if` dentro de un flujo reactivo | Rompe la cadena reactiva |
+| Siempre usar AWS SDK v2 async (`DynamoDbEnhancedAsyncClient`, `CognitoIdentityProviderAsyncClient`) | No bloquear hilos de WebFlux |
+| `subscribeOn(Schedulers.boundedElastic())` solo para SDKs sin cliente async (ej: Resend) | Última opción cuando no hay alternativa async |
+
+### Programación reactiva — patrones correctos
+
+```java
+// ❌ MAL — if dentro de flatMap
+.flatMap(exists -> {
+    if (exists) return Mono.error(new Exception());
+    return hacerAlgo();
+})
+
+// ✅ BIEN — operadores reactivos
+.filter(exists -> !exists)
+.switchIfEmpty(Mono.error(new Exception()))
+.flatMap(exists -> hacerAlgo())
+```
+
+```java
+// ❌ MAL — SDK bloqueante en hilo reactivo
+Mono.fromRunnable(() -> dynamoDb.putItem(...))  // bloquea
+
+// ✅ BIEN — SDK async con fromFuture
+Mono.fromFuture(dynamoDb.putItem(...))  // no bloquea
+```
+
+### DynamoDB — patrones de acceso
+
+| Operación | Cuándo usar | Costo |
+|-----------|-------------|-------|
+| `getItem` | Siempre que tengas la PK | O(1) — más barato |
+| `query` por GSI | Buscar por atributo con índice | O(1) — eficiente |
+| `query` con filter | Nunca si se puede evitar | O(n) — escanea |
+| `scan` | Nunca en producción | O(n) — escanea toda la tabla |
+
+**Regla:** diseñar las tablas según los patrones de acceso. Si necesitas buscar por un atributo frecuentemente, crea un GSI con ese atributo como partition key.
+
+### Secretos y configuración
+
+| Tipo | Dónde vive | Quién lo usa |
+|------|-----------|--------------|
+| Credenciales AWS del pipeline | GitHub Secrets | GitHub Actions |
+| Secrets de la app (JWT, Resend, Cognito) | AWS SSM Parameter Store | ECS en runtime |
+| Configuración no sensible (puertos, tabla names) | `application.yml` | Spring Boot |
+| Nombres de tablas DynamoDB | `DynamoDbProperties` (@ConfigurationProperties) | Adaptadores |
 
 ### Flujo completo de una petición
 

@@ -36,12 +36,9 @@ public class CreateCdaService implements CreateCdaUseCase {
     @Override
     public Mono<CdaActivationResult> execute(CreateCdaCommand command) {
         return cdaRepository.existsByCompanyCode(command.companyCode())
-                .flatMap(exists -> {
-                    if (exists) {
-                        return Mono.error(new CompanyCodeAlreadyExistsException(command.companyCode()));
-                    }
-                    return activateCda(command);
-                });
+                .filter(exists -> !exists)
+                .switchIfEmpty(Mono.error(new CompanyCodeAlreadyExistsException(command.companyCode())))
+                .flatMap(exists -> activateCda(command));
     }
 
     private Mono<CdaActivationResult> activateCda(CreateCdaCommand command) {

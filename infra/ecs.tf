@@ -40,13 +40,13 @@ resource "aws_ecs_task_definition" "auth_service" {
     ]
 
     secrets = [
-      { name = "AWS_COGNITO_USER_POOL_ID",   valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/cognito/user-pool-id" },
-      { name = "AWS_COGNITO_CLIENT_ID",       valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/cognito/client-id" },
-      { name = "AWS_COGNITO_CLIENT_SECRET",   valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/cognito/client-secret" },
-      { name = "RESEND_API_KEY",              valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/resend/api-key" },
-      { name = "RESEND_FROM_EMAIL",           valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/resend/from-email" },
-      { name = "JWT_SECRET",                  valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/jwt/secret" },
-      { name = "FRONTEND_URL",                valueFrom = "arn:aws:ssm:${var.aws_region}:*:parameter/trust/frontend-url" }
+      { name = "AWS_COGNITO_USER_POOL_ID",   valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/cognito/user-pool-id" },
+      { name = "AWS_COGNITO_CLIENT_ID",       valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/cognito/client-id" },
+      { name = "AWS_COGNITO_CLIENT_SECRET",   valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/cognito/client-secret" },
+      { name = "RESEND_API_KEY",              valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/resend/api-key" },
+      { name = "RESEND_FROM_EMAIL",           valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/resend/from-email" },
+      { name = "JWT_SECRET",                  valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/jwt/secret" },
+      { name = "FRONTEND_URL",                valueFrom = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/trust/frontend-url" }
     ]
 
     logConfiguration = {
