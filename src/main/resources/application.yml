@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: auth-service
+
+server:
+  port: 8081
+
+aws:
+  region: us-east-1
+  cognito:
+    user-pool-id: ${AWS_COGNITO_USER_POOL_ID}
+    client-id: ${AWS_COGNITO_CLIENT_ID}
+    client-secret: ${AWS_COGNITO_CLIENT_SECRET}
+  dynamodb:
+    endpoint: ${AWS_DYNAMODB_ENDPOINT:}
+  ses:
+    from-email: ${RESEND_FROM_EMAIL:noreply@trust.com.co}
+
+resend:
+  api-key: ${RESEND_API_KEY}
+
+trust:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: 3600000       # 1 hora
+    refresh-expiration-ms: 604800000  # 7 días
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
+dynamodb:
+  tables:
+    users: trust_users
+    cdas: trust_cdas
+    user-cda: trust_user_cda
