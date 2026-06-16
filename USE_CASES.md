@@ -156,22 +156,22 @@ No se invalida en Cognito porque el token de Cognito nunca sale al frontend. El 
 
 **Autorización:** JWT con scope `TRUST_ADMIN`. Solo usuarios con `platform_role = TRUST_ADMIN` (staff interno de Trust) pueden activar CDAs. El filtro JWT valida el token y Spring Security exige la authority `TRUST_ADMIN` en el path `/internal/**`.
 
-**Request body:**
+**Request body:** (JSON en camelCase)
 ```json
 {
   "name": "CDA Medellín Norte",
-  "company_code": "MDN-001",
-  "admin_email": "admin@cdamedellin.com",
-  "admin_name": "Carlos Pérez"
+  "companyCode": "MDN-001",
+  "adminEmail": "admin@cdamedellin.com",
+  "adminName": "Carlos Pérez"
 }
 ```
 
 **Response `201`:**
 ```json
 {
-  "cda_id": "uuid",
-  "company_code": "MDN-001",
-  "admin_email": "admin@cdamedellin.com",
+  "cdaId": "uuid",
+  "companyCode": "MDN-001",
+  "adminEmail": "admin@cdamedellin.com",
   "status": "ACTIVATED"
 }
 ```
@@ -179,7 +179,7 @@ No se invalida en Cognito porque el token de Cognito nunca sale al frontend. El 
 **Errores:**
 | Código | Condición |
 |--------|-----------|
-| 409 | `company_code` ya existe |
+| 409 | `companyCode` ya existe |
 | 500 + rollback | Falla Cognito → se elimina el CDA creado en DynamoDB |
 | 201 + log | Falla Resend → CDA queda activo, email se reintenta manualmente |
 

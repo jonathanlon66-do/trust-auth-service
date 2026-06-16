@@ -29,3 +29,11 @@ dynamodb:
     users: trust_users
     cdas: trust_cdas
     user-cda: trust_user_cda
+
+logging:
+  level:
+    com.trust.auth: DEBUG          # nuestro código: detalle completo del flujo
+    software.amazon.awssdk: WARN   # AWS SDK: solo warnings/errores
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

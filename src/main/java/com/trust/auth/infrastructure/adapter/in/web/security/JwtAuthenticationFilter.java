@@ -3,6 +3,7 @@ package com.trust.auth.infrastructure.adapter.in.web.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,6 +26,7 @@ import java.util.List;
  *   - platform_role          (staff de Trust, ej: TRUST_ADMIN)
  * El filtro no distingue el origen — solo lee la lista de scopes del token.
  */
+@Slf4j
 public class JwtAuthenticationFilter implements WebFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
@@ -67,6 +69,8 @@ public class JwtAuthenticationFilter implements WebFilter {
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
 
         } catch (Exception e) {
+            log.warn("Token JWT inválido en {}: {}",
+                    exchange.getRequest().getPath().value(), e.getMessage());
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }

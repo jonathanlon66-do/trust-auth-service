@@ -2,6 +2,7 @@ package com.trust.auth.infrastructure.adapter.out.cognito;
 
 import com.trust.auth.domain.port.out.CognitoPort;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -12,6 +13,7 @@ import software.amazon.awssdk.services.cognitoidentityprovider.model.AttributeTy
 import software.amazon.awssdk.services.cognitoidentityprovider.model.DeliveryMediumType;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.MessageActionType;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CognitoAdapter implements CognitoPort {
@@ -39,7 +41,8 @@ public class CognitoAdapter implements CognitoPort {
                         .filter(a -> a.name().equals("sub"))
                         .findFirst()
                         .map(AttributeType::value)
-                        .orElseThrow(() -> new RuntimeException("Cognito no retornó el sub del usuario")));
+                        .orElseThrow(() -> new RuntimeException("Cognito no retornó el sub del usuario")))
+                .doOnError(e -> log.error("Error creando usuario en Cognito (email={}): {}", email, e.toString()));
     }
 
     @Override

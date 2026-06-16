@@ -4,11 +4,13 @@ import com.resend.Resend;
 import com.resend.services.emails.model.CreateEmailOptions;
 import com.trust.auth.domain.port.out.EmailPort;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ResendEmailAdapter implements EmailPort {
@@ -22,14 +24,16 @@ public class ResendEmailAdapter implements EmailPort {
     public Mono<Void> sendCdaInvitation(String toEmail, String adminName, String cdaName,
                                          String companyCode, String tempPassword) {
         return Mono.fromCallable(() -> {
+            log.debug("Enviando email de invitación vía Resend a {} (from={})", toEmail, fromEmail);
             String html = buildInvitationHtml(adminName, cdaName, companyCode, toEmail, tempPassword);
 
-            resend.emails().send(CreateEmailOptions.builder()
+            var response = resend.emails().send(CreateEmailOptions.builder()
                     .from(fromEmail)
                     .to(toEmail)
                     .subject("Tu CDA fue activado en Trust — " + cdaName)
                     .html(html)
                     .build());
+            log.debug("Resend aceptó el email, id={}", response.getId());
             return null;
         }).subscribeOn(Schedulers.boundedElastic()).then();
     }

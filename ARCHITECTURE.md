@@ -73,6 +73,7 @@ src/main/java/com/trust/{servicio}/
 | Los controllers no tienen lógica — solo delegan | Thin controllers |
 | Las excepciones de negocio se lanzan en el `Service` | El dominio decide qué es un error |
 | El `GlobalExceptionHandler` traduce excepciones a HTTP | Separación entre negocio e HTTP |
+| El JSON de la API usa **camelCase** (`companyCode`, `adminEmail`) | Convención por defecto de Jackson, consistente con el código Java |
 | Nunca usar `if` dentro de un flujo reactivo | Rompe la cadena reactiva |
 | Siempre usar AWS SDK v2 async (`DynamoDbEnhancedAsyncClient`, `CognitoIdentityProviderAsyncClient`) | No bloquear hilos de WebFlux |
 | `subscribeOn(Schedulers.boundedElastic())` solo para SDKs sin cliente async (ej: Resend) | Última opción cuando no hay alternativa async |

@@ -14,6 +14,7 @@ import com.trust.auth.domain.port.out.UserCdaRepositoryPort;
 import com.trust.auth.domain.port.out.UserRepositoryPort;
 import com.trust.auth.domain.exception.CompanyCodeAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -23,6 +24,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CreateCdaService implements CreateCdaUseCase {
@@ -35,10 +37,16 @@ public class CreateCdaService implements CreateCdaUseCase {
 
     @Override
     public Mono<CdaActivationResult> execute(CreateCdaCommand command) {
+        log.info("Activación de CDA solicitada: companyCode={}, adminEmail={}",
+                command.companyCode(), command.adminEmail());
         return cdaRepository.existsByCompanyCode(command.companyCode())
                 .filter(exists -> !exists)
                 .switchIfEmpty(Mono.error(new CompanyCodeAlreadyExistsException(command.companyCode())))
-                .flatMap(exists -> activateCda(command));
+                .flatMap(exists -> activateCda(command))
+                .doOnSuccess(result -> log.info("CDA activado: cdaId={}, companyCode={}",
+                        result.cdaId(), result.companyCode()))
+                .doOnError(error -> log.error("Falló la activación del CDA companyCode={}: {}",
+                        command.companyCode(), error.toString()));
     }
 
     private Mono<CdaActivationResult> activateCda(CreateCdaCommand command) {
@@ -55,7 +63,9 @@ public class CreateCdaService implements CreateCdaUseCase {
                 .build();
 
         return cdaRepository.save(cda)
+                .doOnSuccess(c -> log.debug("CDA guardado en DynamoDB: cdaId={}", cdaId))
                 .flatMap(savedCda -> cognito.adminCreateUser(command.adminEmail(), tempPassword, command.adminName())
+                        .doOnSuccess(sub -> log.debug("Usuario admin creado en Cognito: cdaId={}", cdaId))
                         .flatMap(cognitoSub -> {
                             User user = User.builder()
                                     .userId(userId)
@@ -69,6 +79,7 @@ public class CreateCdaService implements CreateCdaUseCase {
 
                             return userRepository.save(user);
                         })
+                        .doOnSuccess(u -> log.debug("Usuario guardado en DynamoDB: userId={}", userId))
                         .flatMap(savedUser -> {
                             UserCda userCda = UserCda.builder()
                                     .userId(savedUser.getUserId())
@@ -81,16 +92,26 @@ public class CreateCdaService implements CreateCdaUseCase {
 
                             return userCdaRepository.save(userCda);
                         })
+                        .doOnSuccess(uc -> log.debug("Relación user↔CDA guardada: userId={}, cdaId={}", userId, cdaId))
                         .flatMap(savedUserCda -> email.sendCdaInvitation(
                                 command.adminEmail(),
                                 command.adminName(),
                                 command.name(),
                                 command.companyCode(),
                                 tempPassword
-                        ).onErrorResume(e -> Mono.empty()))
+                        ).doOnSuccess(v -> log.info("Email de invitación enviado a {}", command.adminEmail()))
+                         .onErrorResume(e -> {
+                            log.warn("No se pudo enviar el email de invitación a {} (el CDA queda activo): {}",
+                                    command.adminEmail(), e.toString());
+                            return Mono.empty();
+                         }))
                         .thenReturn(CdaActivationResult.activated(cdaId, command.companyCode(), command.adminEmail()))
                         .onErrorResume(e -> !(e instanceof CompanyCodeAlreadyExistsException),
-                                e -> cdaRepository.delete(cdaId).then(Mono.error(e)))
+                                e -> {
+                                    log.error("Error durante activación, ejecutando rollback del CDA cdaId={}: {}",
+                                            cdaId, e.toString());
+                                    return cdaRepository.delete(cdaId).then(Mono.error(e));
+                                })
                 );
     }
 
