@@ -9,6 +9,9 @@ import java.util.List;
 @Getter
 @Builder
 public class UserCda {
+
+    public static final String DEFAULT_ADMIN_ROLE = "Administrador";
+
     private final String userId;
     private final String cdaId;
     private final String email;
@@ -22,7 +25,7 @@ public class UserCda {
         return UserCda.builder()
                 .userId(userId)
                 .cdaId(cdaId)
-                .role("Administrador")
+                .role(DEFAULT_ADMIN_ROLE)
                 .scopes(List.of(Scope.values()))
                 .active(true)
                 .createdAt(Instant.now())

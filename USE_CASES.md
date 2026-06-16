@@ -266,40 +266,72 @@ Siempre retornar 200 aunque el email no exista. Evita enumerar usuarios válidos
 
 ## UC-08 — Crear Trabajador
 
-**Actor:** Usuario con scope `administrador`  
+**Actor:** Usuario con scope `ADMINISTRADOR` (gestión de usuarios del CDA)
 **Trigger:** Admin del CDA agrega un nuevo trabajador desde el panel
 
+### Autorización
+- Solo el scope `ADMINISTRADOR` puede llamar este endpoint. Ni `GERENCIAL`, `CALIDAD`, `RRHH` ni `TRUST_ADMIN` (el staff de Trust no gestiona los trabajadores internos de cada CDA).
+- **Escalada de privilegios: permisiva.** Un admin puede asignar cualquier scope, incluso uno que él no tenga. Se confía en el admin dentro de su tenant. Se endurecerá si el negocio lo requiere.
+
 ### Precondiciones
-- El caller debe tener scope `administrador` en su JWT
-- El email del trabajador puede o no existir en el sistema
+- El caller debe tener scope `ADMINISTRADOR` en su JWT
+- El `cdaId` se toma del JWT (no del body), para que el admin no pueda crear usuarios en otro CDA
+
+### Endpoint
+
+**`POST /users/workers`**
+
+**Request body:** (camelCase)
+```json
+{
+  "email": "trabajador@cda.com",
+  "name": "María López",
+  "roleName": "Inspector",
+  "scopes": ["CALIDAD"]
+}
+```
+
+**Response `201`:**
+```json
+{
+  "userId": "uuid",
+  "email": "trabajador@cda.com",
+  "role": "Inspector",
+  "scopes": ["CALIDAD"],
+  "status": "INVITED"
+}
+```
 
 ### Flujo principal
 ```
-1. Admin envía: email, name, role_name, scopes[]
-   (Headers: Authorization: Bearer {jwt_admin})
-2. Sistema verifica scope 'administrador' en el JWT
-3. Sistema extrae cda_id del JWT
-4. Sistema busca si el email ya existe en trust_users
+1. Spring Security verifica scope ADMINISTRADOR
+2. Sistema toma cdaId y userId del admin desde el JWT (TrustPrincipal)
+3. Sistema valida que cada scope del body sea un Scope válido
+4. Sistema busca si el email ya existe en trust_users (GSI email-index)
 
-   → CASO A: Email NO existe (usuario nuevo en el sistema)
-     a. Crear usuario en Cognito (AdminCreateUser + SUPPRESS)
-     b. Guardar en trust_users
-     c. Crear en trust_user_cda con role y scopes
-     d. Enviar email: template worker-invitation (con temp password)
+   → CASO A: Email NO existe (usuario nuevo)
+     a. Provisionar usuario (Cognito AdminCreateUser + SUPPRESS, guardar trust_users)
+     b. Crear en trust_user_cda con roleName y scopes
+     c. Email: template worker-invitation (con temp password)
 
    → CASO B: Email SÍ existe (usuario de otro CDA)
-     a. NO crear en Cognito (ya tiene cuenta)
-     b. Verificar que NO esté ya en este CDA
-     c. Crear solo en trust_user_cda con role y scopes
-     d. Enviar email: template cda-added (sin temp password)
+     a. Verificar que NO esté ya en este CDA (si está → 409)
+     b. NO toca Cognito ni trust_users
+     c. Crear solo en trust_user_cda con roleName y scopes
+     d. Email: template cda-added (sin temp password)
 
-5. Retorna: { user_id, email, role, scopes, status: INVITED }
+5. Retorna: { userId, email, role, scopes, status: INVITED }
 ```
+
+### Rollback (CASO A, saga síncrona)
+- Si falla la escritura en `trust_user_cda` → desaprovisionar usuario (borrar `trust_users` + usuario Cognito).
+- Si falla el email → no es fatal, el trabajador queda creado (se loguea el warning).
+- CASO B no requiere rollback: solo escribe una fila, no crea nada antes.
 
 ### Flujos alternativos
 | Condición | Resultado |
 |-----------|-----------|
-| Caller sin scope `administrador` | 403 — "No tienes permiso para esta acción" |
+| Caller sin scope `ADMINISTRADOR` | 403 — "No tienes permiso para esta acción" |
 | Email ya pertenece a este CDA | 409 — "Este usuario ya es parte de tu empresa" |
 | Scope inválido enviado | 400 — "Scope no reconocido: {scope}" |
 

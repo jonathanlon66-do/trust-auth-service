@@ -179,6 +179,12 @@ Spring Security evalúa el path:
 
 El filtro no distingue de dónde salieron los scopes (de `user_cda` o de `platform_role`) — solo lee la lista del token. El login es quien decide qué scopes meter según el tipo de usuario.
 
+**TrustPrincipal:** el `JwtAuthenticationFilter` no solo expone los scopes como authorities; construye un `TrustPrincipal` (`userId`, `cdaId`, `scopes`) y lo pone como principal en el contexto reactivo. Así los casos de uso obtienen el `cdaId`/`userId` **desde el token**, nunca desde el body. Ej: en UC-08 el `cdaId` del admin sale del principal, evitando que cree usuarios en otro CDA.
+
+**Mapeo de identidad (cognito_sub / email → user_id):** en el login llega el `email` (y Cognito devuelve el `sub`), pero las tablas se cruzan por `user_id`. La traducción se hace con un **GSI `email-index` en `trust_users`**. Ese mismo índice sirve para dos casos: login (email → user_id → permisos) y UC-08 (¿el email ya existe?). Por eso NO se usa un atributo custom en Cognito — un solo GSI cubre ambos.
+
+**Provisión de usuarios (reúso):** crear un usuario nuevo = Cognito `AdminCreateUser` + guardar en `trust_users` (con su rollback atómico). Esa lógica vive en `UserProvisioningService` (`provision` / `deprovision`) y la comparten HU-04 (admin del CDA) y UC-08 caso A (trabajador nuevo). No se duplica.
+
 **Bootstrap:** el primer usuario `TRUST_ADMIN` se siembra manualmente una vez (en Cognito + `trust_users` con `platform_role = TRUST_ADMIN`), porque no hay otro Trust admin que lo cree. Resuelve el huevo-y-gallina.
 
 ---
@@ -562,6 +568,9 @@ FRONTEND_URL=https://app.trust.com.co
 | Email en creación de worker | Siempre enviar invitación | El trabajador puede no existir en Cognito o puede ser un user existente en otro CDA |
 | Entorno local | Perfiles AWS apuntando a QA | No se usa DynamoDB local — el ambiente QA en AWS sirve como entorno de desarrollo |
 | Auth de `/internal/**` | Scope `TRUST_ADMIN` vía JWT (no shared secret) | Auditoría por usuario, revocable, un solo esquema de auth. El staff de Trust es un usuario con `platform_role`, no un tenant falso |
+| Mapeo identidad → user_id | GSI `email-index` en `trust_users` (no atributo custom en Cognito) | Un solo índice sirve a login y a UC-08; evita cambiar el schema del User Pool (riesgo de recreación) |
+| Escalada de privilegios en UC-08 | Permisiva (el admin asigna cualquier scope) | Se confía en el admin dentro de su tenant; se endurece si el negocio lo pide |
+| Creación de usuarios | `UserProvisioningService` compartido (HU-04 + UC-08) | Lógica de Cognito + trust_users + rollback en un solo lugar, sin duplicar |
 
 ---
 

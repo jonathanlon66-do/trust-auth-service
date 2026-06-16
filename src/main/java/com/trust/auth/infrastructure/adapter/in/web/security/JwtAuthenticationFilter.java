@@ -54,16 +54,22 @@ public class JwtAuthenticationFilter implements WebFilter {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            List<?> scopes = claims.get("scopes", List.class);
-            List<SimpleGrantedAuthority> authorities = scopes == null
+            List<?> rawScopes = claims.get("scopes", List.class);
+            List<String> scopes = rawScopes == null
                     ? List.of()
-                    : scopes.stream()
-                        .map(Object::toString)
-                        .map(SimpleGrantedAuthority::new)
-                        .toList();
+                    : rawScopes.stream().map(Object::toString).toList();
+
+            List<SimpleGrantedAuthority> authorities = scopes.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .toList();
+
+            TrustPrincipal principal = new TrustPrincipal(
+                    claims.getSubject(),
+                    claims.get("cda_id", String.class),
+                    scopes);
 
             var authentication = new UsernamePasswordAuthenticationToken(
-                    claims.getSubject(), null, authorities);
+                    principal, null, authorities);
 
             return chain.filter(exchange)
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
