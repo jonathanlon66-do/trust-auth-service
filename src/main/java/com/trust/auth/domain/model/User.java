@@ -18,4 +18,16 @@ public class User {
     private final boolean active;
     private final PlatformRole platformRole;
     private final Instant createdAt;
+
+    public static User createPending(String userId, String cognitoSub, String email, String name) {
+        return User.builder()
+                .userId(userId)
+                .cognitoSub(cognitoSub)
+                .email(email)
+                .name(name)
+                .onboarded(false)
+                .active(true)
+                .createdAt(Instant.now())
+                .build();
+    }
 }

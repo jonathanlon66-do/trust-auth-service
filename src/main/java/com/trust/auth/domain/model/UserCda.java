@@ -17,4 +17,15 @@ public class UserCda {
     private final List<Scope> scopes;
     private final boolean active;
     private final Instant createdAt;
+
+    public static UserCda createAdmin(String userId, String cdaId) {
+        return UserCda.builder()
+                .userId(userId)
+                .cdaId(cdaId)
+                .role("Administrador")
+                .scopes(List.of(Scope.values()))
+                .active(true)
+                .createdAt(Instant.now())
+                .build();
+    }
 }
