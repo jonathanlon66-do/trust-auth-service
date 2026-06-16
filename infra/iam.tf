@@ -68,7 +68,8 @@ resource "aws_iam_role_policy" "ecs_task_dynamodb_cognito" {
           "dynamodb:Scan"
         ]
         Resource = [
-          "arn:aws:dynamodb:${var.aws_region}:*:table/trust_*"
+          "arn:aws:dynamodb:${var.aws_region}:${var.aws_account_id}:table/trust_*",
+          "arn:aws:dynamodb:${var.aws_region}:${var.aws_account_id}:table/trust_*/index/*"
         ]
       },
       {
