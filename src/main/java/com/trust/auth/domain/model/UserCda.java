@@ -31,4 +31,15 @@ public class UserCda {
                 .createdAt(Instant.now())
                 .build();
     }
+
+    public static UserCda createWorker(String userId, String cdaId, String role, List<Scope> scopes) {
+        return UserCda.builder()
+                .userId(userId)
+                .cdaId(cdaId)
+                .role(role)
+                .scopes(scopes)
+                .active(true)
+                .createdAt(Instant.now())
+                .build();
+    }
 }

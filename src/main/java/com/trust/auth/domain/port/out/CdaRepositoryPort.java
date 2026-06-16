@@ -5,6 +5,7 @@ import reactor.core.publisher.Mono;
 
 public interface CdaRepositoryPort {
     Mono<Boolean> existsByCompanyCode(String companyCode);
+    Mono<Cda> findById(String cdaId);
     Mono<Cda> save(Cda cda);
     Mono<Void> delete(String cdaId);
 }

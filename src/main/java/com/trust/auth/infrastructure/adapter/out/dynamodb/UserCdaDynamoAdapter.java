@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 
 @Component
@@ -22,6 +23,14 @@ public class UserCdaDynamoAdapter implements UserCdaRepositoryPort {
 
     private DynamoDbAsyncTable<UserCdaEntity> table() {
         return dynamoDbClient.table(tables.getUserCda(), TableSchema.fromBean(UserCdaEntity.class));
+    }
+
+    @Override
+    public Mono<Boolean> exists(String cdaId, String userId) {
+        return Mono.fromFuture(table().getItem(Key.builder()
+                        .partitionValue(cdaId).sortValue(userId).build()))
+                .map(item -> true)
+                .defaultIfEmpty(false);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package com.trust.auth.infrastructure.adapter.in.web;
 
 import com.trust.auth.domain.exception.CompanyCodeAlreadyExistsException;
+import com.trust.auth.domain.exception.InvalidScopeException;
+import com.trust.auth.domain.exception.WorkerAlreadyInCdaException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +16,22 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleCompanyCodeAlreadyExists(CompanyCodeAlreadyExistsException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         problem.setTitle("Código de empresa ya registrado");
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    @ExceptionHandler(WorkerAlreadyInCdaException.class)
+    public ProblemDetail handleWorkerAlreadyInCda(WorkerAlreadyInCdaException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setTitle("El usuario ya pertenece a este CDA");
+        problem.setDetail(ex.getMessage());
+        return problem;
+    }
+
+    @ExceptionHandler(InvalidScopeException.class)
+    public ProblemDetail handleInvalidScope(InvalidScopeException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Scope inválido");
         problem.setDetail(ex.getMessage());
         return problem;
     }

@@ -36,6 +36,12 @@ public class CdaDynamoAdapter implements CdaRepositoryPort {
     }
 
     @Override
+    public Mono<Cda> findById(String cdaId) {
+        return Mono.fromFuture(table().getItem(Key.builder().partitionValue(cdaId).build()))
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public Mono<Cda> save(Cda cda) {
         return Mono.fromFuture(table().putItem(mapper.toEntity(cda)))
                 .thenReturn(cda);

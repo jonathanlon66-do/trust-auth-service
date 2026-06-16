@@ -12,6 +12,7 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +24,16 @@ public class UserDynamoAdapter implements UserRepositoryPort {
 
     private DynamoDbAsyncTable<UserEntity> table() {
         return dynamoDbClient.table(tables.getUsers(), TableSchema.fromBean(UserEntity.class));
+    }
+
+    @Override
+    public Mono<User> findByEmail(String email) {
+        var index = table().index("email-index");
+        var query = QueryConditional.keyEqualTo(Key.builder().partitionValue(email).build());
+        return Mono.from(index.query(r -> r.queryConditional(query)))
+                .flatMap(page -> page.items().isEmpty()
+                        ? Mono.empty()
+                        : Mono.just(mapper.toDomain(page.items().get(0))));
     }
 
     @Override

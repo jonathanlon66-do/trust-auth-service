@@ -24,6 +24,7 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/health").permitAll()
                         .pathMatchers("/auth/**").permitAll()
                         .pathMatchers("/internal/**").hasAuthority("TRUST_ADMIN")
+                        .pathMatchers("/users/**").hasAuthority("ADMINISTRADOR")
                         .anyExchange().authenticated()
                 )
                 .addFilterAt(new JwtAuthenticationFilter(jwtSecret), SecurityWebFiltersOrder.AUTHENTICATION)
